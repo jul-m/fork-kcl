@@ -1444,6 +1444,57 @@ mod tests {
 
     #[test]
     #[bench_test]
+    fn attr_name_completion_on_shorthand_entry() {
+        // test attribute completion on a partial name parsed as a shorthand config entry
+        let (file, program, _, gs, schema_map) =
+            compile_test_file("src/test_data/completion_test/shorthand/shorthand.k");
+        let tool = toolchain::default();
+        for (line, column) in [(11, 7), (27, 11)] {
+            let pos = KCLPos {
+                filename: file.to_owned(),
+                line,
+                column: Some(column),
+            };
+            let got = completion(None, &program, &pos, &gs, &tool, None, &schema_map).unwrap();
+            let mut got_labels: Vec<String> = match got {
+                CompletionResponse::Array(arr) => {
+                    arr.iter().map(|item| item.label.clone()).collect()
+                }
+                CompletionResponse::List(_) => panic!("test failed"),
+            };
+            got_labels.sort();
+            let expected_labels: Vec<&str> = vec!["debug", "verbose"];
+            assert_eq!(got_labels, expected_labels, "line {line}");
+        }
+    }
+
+    #[test]
+    #[bench_test]
+    fn attr_value_completion_on_shorthand_entry() {
+        // test value completion after a name parsed as a shorthand config entry, defined or not
+        let (file, program, _, gs, schema_map) =
+            compile_test_file("src/test_data/completion_test/shorthand/shorthand.k");
+        let tool = toolchain::default();
+        for (line, column) in [(16, 10), (21, 16)] {
+            let pos = KCLPos {
+                filename: file.to_owned(),
+                line,
+                column: Some(column),
+            };
+            let got = completion(Some(':'), &program, &pos, &gs, &tool, None, &schema_map).unwrap();
+            let got_labels: Vec<String> = match got {
+                CompletionResponse::Array(arr) => {
+                    arr.iter().map(|item| item.label.clone()).collect()
+                }
+                CompletionResponse::List(_) => panic!("test failed"),
+            };
+            let expected_labels: Vec<&str> = vec![" True", " False"];
+            assert_eq!(got_labels, expected_labels, "line {line}");
+        }
+    }
+
+    #[test]
+    #[bench_test]
     fn attr_value_completion() {
         let (file, program, _, gs, schema_map) =
             compile_test_file("src/test_data/completion_test/assign/completion.k");
